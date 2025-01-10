@@ -176,6 +176,62 @@ class HubSpotClient:
             logger.error(f"Exception: {str(e)}")
             return json.dumps({"error": str(e)})
 
+    def update_contact(self, contact_id: str, properties: Dict[str, Any]) -> str:
+        """Update a HubSpot contact with the given properties"""
+        try:
+            # Create SimplePublicObjectInput for the update
+            from hubspot.crm.contacts import SimplePublicObjectInput
+            
+            simple_public_object_input = SimplePublicObjectInput(
+                properties=properties
+            )
+            
+            # Update the contact
+            api_response = self.client.crm.contacts.basic_api.update(
+                contact_id=contact_id,
+                simple_public_object_input=simple_public_object_input
+            )
+            
+            # Convert and return the response
+            response_dict = api_response.to_dict()
+            converted_response = convert_datetime_fields(response_dict)
+            return json.dumps(converted_response)
+            
+        except ApiException as e:
+            logger.error(f"API Exception in update_contact: {str(e)}")
+            return json.dumps({"error": str(e)})
+        except Exception as e:
+            logger.error(f"Exception in update_contact: {str(e)}")
+            return json.dumps({"error": str(e)})
+
+    def update_company(self, company_id: str, properties: Dict[str, Any]) -> str:
+        """Update a HubSpot company with the given properties"""
+        try:
+            # Create SimplePublicObjectInput for the update
+            from hubspot.crm.companies import SimplePublicObjectInput
+            
+            simple_public_object_input = SimplePublicObjectInput(
+                properties=properties
+            )
+            
+            # Update the company
+            api_response = self.client.crm.companies.basic_api.update(
+                company_id=company_id,
+                simple_public_object_input=simple_public_object_input
+            )
+            
+            # Convert and return the response
+            response_dict = api_response.to_dict()
+            converted_response = convert_datetime_fields(response_dict)
+            return json.dumps(converted_response)
+            
+        except ApiException as e:
+            logger.error(f"API Exception in update_company: {str(e)}")
+            return json.dumps({"error": str(e)})
+        except Exception as e:
+            logger.error(f"Exception in update_company: {str(e)}")
+            return json.dumps({"error": str(e)})
+
     def get_recent_activities(self) -> str:
         """Get recent activities from HubSpot for the last 3 days"""
         try:
@@ -408,6 +464,38 @@ async def main(access_token: Optional[str] = None):
                     "properties": {},
                 },
             ),
+            types.Tool(
+                name="hubspot_update_contact",
+                description="Update an existing contact in HubSpot",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "contact_id": {"type": "string", "description": "HubSpot contact ID"},
+                        "properties": {
+                            "type": "object",
+                            "description": "Properties to update for the contact",
+                            "additionalProperties": {"type": "string"}
+                        }
+                    },
+                    "required": ["contact_id", "properties"]
+                },
+            ),
+            types.Tool(
+                name="hubspot_update_company",
+                description="Update an existing company in HubSpot",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "company_id": {"type": "string", "description": "HubSpot company ID"},
+                        "properties": {
+                            "type": "object",
+                            "description": "Properties to update for the company",
+                            "additionalProperties": {"type": "string"}
+                        }
+                    },
+                    "required": ["company_id", "properties"]
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -566,6 +654,34 @@ async def main(access_token: Optional[str] = None):
                 results = hubspot.get_recent_activities()
                 return [types.TextContent(type="text", text=str(results))]
 
+            elif name == "hubspot_update_contact":
+                if not arguments:
+                    raise ValueError("Missing arguments for update_contact")
+                
+                contact_id = arguments["contact_id"]
+                properties = arguments["properties"]
+                
+                # Validate properties
+                if not isinstance(properties, dict):
+                    raise ValueError("Properties must be a dictionary")
+                
+                results = hubspot.update_contact(contact_id, properties)
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "hubspot_update_company":
+                if not arguments:
+                    raise ValueError("Missing arguments for update_company")
+                
+                company_id = arguments["company_id"]
+                properties = arguments["properties"]
+                
+                # Validate properties
+                if not isinstance(properties, dict):
+                    raise ValueError("Properties must be a dictionary")
+                
+                results = hubspot.update_company(company_id, properties)
+                return [types.TextContent(type="text", text=str(results))]
+
             else:
                 raise ValueError(f"Unknown tool: {name}")
 
@@ -591,4 +707,4 @@ async def main(access_token: Optional[str] = None):
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main()) 
+    asyncio.run(main())
