@@ -1,7 +1,9 @@
 import pytest
+import json
 from mcp_server_hubspot.server import HubSpotClient
 import mcp.types as types
 from mcp.server import Server
+from tests.test_data import TEST_CONTACT, UPDATED_CONTACT
 
 @pytest.fixture
 def hubspot_client(hubspot_token):
@@ -15,33 +17,35 @@ def server():
 
 @pytest.mark.asyncio
 async def test_update_contact(hubspot_client, server):
-    """Test updating a contact through the HubSpot API"""
-    # First get a list of contacts to get a valid ID
-    contacts_json = hubspot_client.get_contacts()
-    contacts = eval(contacts_json)  # Convert string to Python object
+    """Test updating a contact through the HubSpot API using test data"""
+    # Create a test contact
+    create_result = hubspot_client.create_contact(TEST_CONTACT["properties"])
+    create_response = json.loads(create_result)
+    assert "error" not in create_response, f"Create failed: {create_response.get('error')}"
     
-    if not contacts or isinstance(contacts, dict) and "error" in contacts:
-        pytest.skip("No contacts available to test with")
+    contact_id = create_response["id"]
     
-    # Get the first contact's ID
-    contact_id = contacts[0]["id"]
-    
-    # Test direct client update
-    update_result = hubspot_client.update_contact(
-        contact_id=contact_id,
-        properties={
-            "firstname": "Updated",
-            "lastname": "Contact",
-            "email": "updated@example.com"
-        }
-    )
-    
-    # Verify the result
-    response = eval(update_result)  # Convert string to Python object
-    assert "error" not in response, f"Update failed: {response.get('error')}"
-    assert response["properties"]["firstname"] == "Updated"
-    assert response["properties"]["lastname"] == "Contact"
-    assert response["properties"]["email"] == "updated@example.com"
+    try:
+        # Update the test contact
+        update_result = hubspot_client.update_contact(
+            contact_id=contact_id,
+            properties=UPDATED_CONTACT["properties"]
+        )
+        
+        # Verify the update
+        update_response = json.loads(update_result)
+        assert "error" not in update_response, f"Update failed: {update_response.get('error')}"
+        assert update_response["properties"]["phone"] == UPDATED_CONTACT["properties"]["phone"]
+        
+        # Verify other properties remained unchanged
+        for key in ["firstname", "lastname", "email", "company"]:
+            assert update_response["properties"][key] == TEST_CONTACT["properties"][key]
+            
+    finally:
+        # Clean up - delete the test contact
+        delete_result = hubspot_client.delete_contact(contact_id)
+        delete_response = json.loads(delete_result)
+        assert "error" not in delete_response, f"Delete failed: {delete_response.get('error')}"
 
 @pytest.mark.asyncio
 async def test_update_contact_invalid_id(hubspot_client):
@@ -54,5 +58,5 @@ async def test_update_contact_invalid_id(hubspot_client):
         }
     )
     
-    response = eval(result)
+    response = json.loads(result)
     assert "error" in response

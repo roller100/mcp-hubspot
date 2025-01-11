@@ -176,6 +176,31 @@ class HubSpotClient:
             logger.error(f"Exception: {str(e)}")
             return json.dumps({"error": str(e)})
 
+    def create_contact(self, properties: Dict[str, Any]) -> str:
+        """Create a new HubSpot contact with the given properties"""
+        try:
+            # Create SimplePublicObjectInputForCreate for the contact
+            simple_public_object_input = SimplePublicObjectInputForCreate(
+                properties=properties
+            )
+            
+            # Create the contact
+            api_response = self.client.crm.contacts.basic_api.create(
+                simple_public_object_input_for_create=simple_public_object_input
+            )
+            
+            # Convert and return the response
+            response_dict = api_response.to_dict()
+            converted_response = convert_datetime_fields(response_dict)
+            return json.dumps(converted_response)
+            
+        except ApiException as e:
+            logger.error(f"API Exception in create_contact: {str(e)}")
+            return json.dumps({"error": str(e)})
+        except Exception as e:
+            logger.error(f"Exception in create_contact: {str(e)}")
+            return json.dumps({"error": str(e)})
+
     def update_contact(self, contact_id: str, properties: Dict[str, Any]) -> str:
         """Update a HubSpot contact with the given properties"""
         try:
@@ -202,6 +227,20 @@ class HubSpotClient:
             return json.dumps({"error": str(e)})
         except Exception as e:
             logger.error(f"Exception in update_contact: {str(e)}")
+            return json.dumps({"error": str(e)})
+
+    def delete_contact(self, contact_id: str) -> str:
+        """Delete a HubSpot contact"""
+        try:
+            # Delete the contact
+            self.client.crm.contacts.basic_api.archive(contact_id=contact_id)
+            return json.dumps({"success": True})
+            
+        except ApiException as e:
+            logger.error(f"API Exception in delete_contact: {str(e)}")
+            return json.dumps({"error": str(e)})
+        except Exception as e:
+            logger.error(f"Exception in delete_contact: {str(e)}")
             return json.dumps({"error": str(e)})
 
     def update_company(self, company_id: str, properties: Dict[str, Any]) -> str:
