@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 import logging
-from . import server
+from .server import Server
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('mcp_hubspot')
@@ -14,12 +14,13 @@ def main():
     
     logger.debug(f"Access token from args: {args.access_token}")
     # Run the async main function
-    logger.debug("About to run server.main()")
-    asyncio.run(server.main(args.access_token))
-    logger.debug("Server main() completed")
+    logger.debug("About to run server")
+    server = Server()
+    asyncio.run(server.run())
+    logger.debug("Server completed")
 
 if __name__ == "__main__":
     main()
 
 # Expose important items at package level
-__all__ = ["main", "server"] 
+__all__ = ["main", "Server"]
